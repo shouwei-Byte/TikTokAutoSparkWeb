@@ -145,7 +145,7 @@ export const submitVerifyCode = (code) => api.get('/Api/LoginPhoneInput', { para
 export const logout = () => api.get('/Api/logout')
 
 // 获取好友列表
-export const getFriendsList = () => api.get('/Api/GetFriendsList')
+export const getFriendsList = () => api.get('/Api/GetFriendsList', { timeout: 30000 })
 
 // 发送消息
 export const sendMessage = (name, text) => api.get('/Api/Send', { params: { name, text } })

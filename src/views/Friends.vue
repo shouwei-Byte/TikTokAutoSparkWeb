@@ -177,10 +177,10 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ref, computed, onMounted, onActivated } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Refresh, Search, User, ArrowDown, Tickets, Check, Close } from '@element-plus/icons-vue'
-import { sendMessage, addTask } from '../api/douyin'
+import { sendMessage, addTask, getFriendsList } from '../api/douyin'
 import { friendsList, setFriendsList } from '../stores/browser'
 
 const loading = ref(false)
@@ -239,14 +239,10 @@ const filteredFriends = computed(() => {
 
 // 刷新按钮 - 请求 API 获取最新数据
 const loadFriends = async () => {
+  if (loading.value) return
   loading.value = true
   try {
-    const res = await fetch('/api/Api/GetFriendsList', {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('token') || localStorage.getItem('douyin_token')}`
-      }
-    })
-    const data = await res.json()
+    const data = await getFriendsList()
     if (data.code == 401) {
       ElMessageBox.confirm('您还未登录抖音账号，是否前往登录？', '提示', {
         confirmButtonText: '前往登录',
@@ -266,13 +262,34 @@ const loadFriends = async () => {
         fire
       }))
       setFriendsList(formattedList)
+      return
     }
+    ElMessage.error(data.data || '加载好友列表失败')
   } catch (error) {
-    ElMessage.error('加载好友列表失败')
+    const message = error?.message || ''
+    if (message.includes('未授权') || message.includes('登录已过期') || message.includes('未登录')) {
+      ElMessageBox.confirm('您还未登录抖音账号，是否前往登录？', '提示', {
+        confirmButtonText: '前往登录',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+        window.location.href = '/settings'
+      }).catch(() => {})
+    } else {
+      ElMessage.error(message || '加载好友列表失败')
+    }
   } finally {
     loading.value = false
   }
 }
+
+onMounted(async () => {
+  await loadFriends()
+})
+
+onActivated(async () => {
+  await loadFriends()
+})
 
 const openSendDialog = (friend) => {
   sendForm.value = {
